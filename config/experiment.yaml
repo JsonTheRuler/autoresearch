@@ -1,4 +1,4 @@
-experiment_name: "reg_lgbm_lr02_or30"
+experiment_name: "reg_lgbm_leaves64_or30"
 random_seed: 42
 
 data:
@@ -48,6 +48,7 @@ regression:
   model_type: "lightgbm"
   hyperparameters:
     n_estimators: 3000
+    num_leaves: 64
     max_depth: -1
     learning_rate: 0.2
     subsample: 0.7
