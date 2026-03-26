@@ -1,4 +1,4 @@
-experiment_name: "clf_smote04_ageins_or000"
+experiment_name: "clf_smote04_ageins_sub07_or000"
 random_seed: 42
 
 data:
@@ -66,6 +66,8 @@ classification:
     n_estimators: 300
     max_depth: 6
     learning_rate: 0.05
+    subsample: 0.7
+    colsample_bytree: 0.7
     is_unbalance: true
     random_state: 42
     verbose: -1
