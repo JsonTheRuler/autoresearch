@@ -1,4 +1,4 @@
-experiment_name: "clf_smote04_ageins_or000"
+experiment_name: "clf_smote04_ageins_nois_or000"
 random_seed: 42
 
 data:
@@ -33,7 +33,6 @@ features:
     - HAS_BASEMENT
   insurance_extra:
     - HOUSING_BURDEN
-    - INCOME_SOURCES
     - LOG_ZINC2
     - LOG_VALUE
     - AGE_INS
