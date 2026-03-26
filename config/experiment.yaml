@@ -1,4 +1,4 @@
-experiment_name: "reg_lgbm_lr02_or30"
+experiment_name: "feat_lot_per_sqft_or30"
 random_seed: 42
 
 data:
@@ -31,6 +31,7 @@ features:
     - TOTAL_PROBLEMS
     - HAS_AMENITIES
     - HAS_BASEMENT
+    - LOT_PER_SQFT
   insurance_extra:
     - HOUSING_BURDEN
     - INCOME_SOURCES
