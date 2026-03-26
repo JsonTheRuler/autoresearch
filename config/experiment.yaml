@@ -1,4 +1,4 @@
-experiment_name: "clf_smote04_ageins_minfeats_or000"
+experiment_name: "clf_smote04_ageins_or000"
 random_seed: 42
 
 data:
@@ -28,6 +28,8 @@ features:
     - LOG_UNITSF
     - LOG_LOT
     - ROOMS_PER_BATH
+    - TOTAL_PROBLEMS
+    - HAS_AMENITIES
     - HAS_BASEMENT
   insurance_extra:
     - HOUSING_BURDEN
