@@ -1,4 +1,4 @@
-experiment_name: "reg_lgbm_leaves128_or30"
+experiment_name: "reg_lgbm_l128_sub08_or30"
 random_seed: 42
 
 data:
@@ -51,7 +51,7 @@ regression:
     num_leaves: 128
     max_depth: -1
     learning_rate: 0.2
-    subsample: 0.7
+    subsample: 0.8
     colsample_bytree: 0.7
     random_state: 42
     verbose: -1
