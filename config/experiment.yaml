@@ -1,4 +1,4 @@
-experiment_name: "reg_lgbm_depth1_lr001_or005"
+experiment_name: "reg_lgbm_depth1_lr0005_or005"
 random_seed: 42
 
 data:
@@ -49,7 +49,7 @@ regression:
   hyperparameters:
     n_estimators: 3000
     max_depth: 1
-    learning_rate: 0.01
+    learning_rate: 0.005
     subsample: 0.75
     colsample_bytree: 0.75
     random_state: 42
