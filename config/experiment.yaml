@@ -1,4 +1,4 @@
-experiment_name: "clf_smote04_ageins_500est_or000"
+experiment_name: "clf_smote04_ageins_or000"
 random_seed: 42
 
 data:
@@ -63,9 +63,9 @@ classification:
   model_type: "lightgbm"
   target: "BUYI"
   hyperparameters:
-    n_estimators: 500
+    n_estimators: 300
     max_depth: 6
-    learning_rate: 0.03
+    learning_rate: 0.05
     is_unbalance: true
     random_state: 42
     verbose: -1
