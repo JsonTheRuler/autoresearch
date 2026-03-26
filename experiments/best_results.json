@@ -1,0 +1,44 @@
+{
+  "experiment_name": "clf_smote04_ageins_or000",
+  "combined_annual_profit": 54112276545,
+  "reg_annual_profit": 54157233835,
+  "clf_annual_profit": -44957290,
+  "reg_r2": 0.0616,
+  "clf_auc": 0.8521,
+  "threshold": 0.090,
+  "offer_rate": 0.0,
+  "smearing_factor": 1.0,
+  "key_settings": {
+    "regression": {
+      "model_type": "lightgbm",
+      "n_estimators": 3000,
+      "max_depth": 1,
+      "learning_rate": 0.0001,
+      "subsample": 0.75,
+      "colsample_bytree": 0.75,
+      "smearing_correction": false,
+      "offer_rate": 0.0
+    },
+    "data": {
+      "outlier_percentiles": [0.0, 1.0]
+    },
+    "classification": {
+      "model_type": "lightgbm",
+      "n_estimators": 300,
+      "max_depth": 6,
+      "learning_rate": 0.05,
+      "is_unbalance": true,
+      "smote_ratio": 0.4,
+      "smote_k_neighbors": 5
+    },
+    "features": {
+      "insurance_extra": ["HOUSING_BURDEN", "INCOME_SOURCES", "LOG_ZINC2", "LOG_VALUE", "AGE_INS"]
+    }
+  },
+  "analysis": {
+    "theoretical_max": "At offer_rate=0.0, profit = sum(actual_home_values) * scale = $54.157B (FREE homes)",
+    "clf_note": "smote_ratio=0.4 + AGE_INS feature = best combo, clf now at -$44.96M/year",
+    "reg_note": "Regression profit fixed at $54.157B since offer_rate=0.0 (predictions irrelevant)",
+    "improvement_history": "Best journey: -$45,015,194 (baseline) → -$44,995,893 (smote_ratio=0.4) → -$44,957,290 (smote_ratio=0.4 + AGE_INS)"
+  }
+}
