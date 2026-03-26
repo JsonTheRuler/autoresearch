@@ -1,0 +1,114 @@
+# AHS Autoresearch Experiment Configuration
+# Edit this file to try new experiments
+
+data:
+  price_file: "data/raw/ahs_price_sample.xlsx"
+  insurance_file: "data/raw/ahs_insurance_sample.xlsx"
+  test_size: 0.2
+  random_state: 42
+
+# AHS codebook preprocessing
+preprocessing:
+  # Binary columns: AHS uses 1=Yes, 2=No → recode to 1/0
+  binary_columns:
+    - BUYI       # Buying intention
+    - CELLAR     # Has cellar/basement
+    - GARAGE     # Has garage
+    - PORCH      # Has porch
+    - CONDO      # Is condominium
+    - MOBILHOME  # Is mobile home
+
+  # Columns where -6 means "Not applicable" → NaN
+  na_sentinel: -6
+
+  # BUILT column: range codes → midpoint years
+  built_midpoints:
+    1: 2020   # 2020 or later
+    2: 2017   # 2015-2019
+    3: 2012   # 2010-2014
+    4: 2007   # 2005-2009
+    5: 2002   # 2000-2004
+    6: 1997   # 1995-1999
+    7: 1992   # 1990-1994
+    8: 1987   # 1985-1989
+    9: 1982   # 1980-1984
+    10: 1977  # 1975-1979
+    11: 1972  # 1970-1974
+    12: 1967  # 1965-1969
+    13: 1962  # 1960-1964
+    14: 1955  # 1950-1959
+    15: 1945  # 1940-1949
+    16: 1935  # 1930-1939
+    17: 1920  # 1920-1929
+    18: 1910  # Before 1920
+
+# Price prediction task
+price_model:
+  name: "xgboost"           # xgboost | lightgbm | random_forest | ridge
+  target: "VALUE"
+  features:
+    - UNITSF      # Square footage
+    - LOT         # Lot size
+    - ROOMS       # Number of rooms
+    - BEDRMS      # Number of bedrooms
+    - BATHS       # Number of bathrooms
+    - BUILT       # Year built (after midpoint conversion)
+    - GARAGE      # Has garage (binary)
+    - CELLAR      # Has cellar (binary)
+    - PORCH       # Has porch (binary)
+    - STORIES     # Number of stories
+    - REGION      # Census region
+  hyperparams:
+    n_estimators: 500
+    max_depth: 6
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+    min_child_weight: 5
+    reg_alpha: 0.1
+    reg_lambda: 1.0
+
+# Insurance task
+insurance_model:
+  name: "lightgbm"          # xgboost | lightgbm | random_forest | ridge
+  target: "AMTI"            # Annual insurance premium
+  features:
+    - VALUE       # Property value
+    - UNITSF      # Square footage
+    - LOT         # Lot size
+    - BUILT       # Year built
+    - ROOMS       # Rooms
+    - BATHS       # Bathrooms
+    - REGION      # Census region
+    - CELLAR      # Has cellar
+    - GARAGE      # Has garage
+    - STORIES     # Stories
+  hyperparams:
+    n_estimators: 500
+    max_depth: 6
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+    min_child_samples: 10
+    reg_alpha: 0.1
+    reg_lambda: 1.0
+    verbose: -1
+
+# Profit scoring thresholds
+scoring:
+  # Price task: profit = how much we'd earn flipping undervalued homes
+  price_profit:
+    buy_threshold_pct: -0.10    # Buy if predicted value > actual by 10%+
+    transaction_cost_pct: 0.06  # 6% transaction costs (agent fees, closing)
+    max_investment: 500000      # Cap per property
+
+  # Insurance task: profit from identifying under-priced policies
+  insurance_profit:
+    underprice_threshold_pct: 0.15  # Flag if predicted premium > actual by 15%+
+    adjustment_capture_pct: 0.25   # We capture 25% of the gap as profit
+    min_premium_gap: 200           # Minimum $ gap to flag
+
+  # Combined metric weights
+  weights:
+    price_profit: 0.6
+    insurance_profit: 0.4

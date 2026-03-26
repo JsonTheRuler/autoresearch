@@ -12,12 +12,15 @@ worktrees/
 results/
 queue/
 
-# Agent prompt files (generated per-session by launchers)
-CLAUDE.md
+# Agent prompt files
 AGENTS.md
 
 # Experimental code/artifacts
 dev/
 
-# Results file
+# Results and logs (untracked, generated at runtime)
 results.tsv
+experiments/results.tsv
+experiments/run_*.log
+experiments/loop_output.log
+run.log
