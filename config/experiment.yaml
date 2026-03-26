@@ -1,4 +1,4 @@
-experiment_name: "clf_lgbm_2000est_lr001_or000"
+experiment_name: "reg_lgbm_depth1_lr00001_or000"
 random_seed: 42
 
 data:
@@ -62,15 +62,13 @@ classification:
   model_type: "lightgbm"
   target: "BUYI"
   hyperparameters:
-    n_estimators: 2000
+    n_estimators: 300
     max_depth: 6
-    learning_rate: 0.01
+    learning_rate: 0.05
     is_unbalance: true
     random_state: 42
     verbose: -1
     n_jobs: -1
-    subsample: 0.8
-    colsample_bytree: 0.8
   sampling:
     strategy: "smote"
     smote_ratio: 0.3
