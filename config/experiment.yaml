@@ -1,4 +1,4 @@
-experiment_name: "reg_lgbm_l128_nosmear_nooutlier"
+experiment_name: "reg_lgbm_l128_nosmear_nooutlier_or20"
 random_seed: 42
 
 data:
@@ -56,7 +56,7 @@ regression:
     random_state: 42
     verbose: -1
     n_jobs: -1
-  offer_rate: 0.30
+  offer_rate: 0.20
   smearing_correction: false
 
 classification:
