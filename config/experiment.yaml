@@ -1,4 +1,4 @@
-experiment_name: "clf_lgbm_highthresh"
+experiment_name: "clf_lgbm_finethresh"
 random_seed: 42
 
 data:
@@ -74,9 +74,9 @@ classification:
     smote_ratio: 0.3
     smote_k_neighbors: 5
   threshold_search:
-    min: 0.10
-    max: 0.98
-    step: 0.01
+    min: 0.01
+    max: 0.30
+    step: 0.005
 
 scaling:
   annual_properties: 200000
