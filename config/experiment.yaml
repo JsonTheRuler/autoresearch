@@ -1,4 +1,4 @@
-experiment_name: "reg_lgbm_l128_nosmear_or30"
+experiment_name: "reg_lgbm_l128_nosmear_narrowoutlier"
 random_seed: 42
 
 data:
@@ -10,7 +10,7 @@ data:
     CLIMB: 0
     CONFEE: 0
     default: "nan"
-  outlier_percentiles: [0.01, 0.99]
+  outlier_percentiles: [0.005, 0.995]
   test_size: 0.20
   validation_size: 0.20
 
