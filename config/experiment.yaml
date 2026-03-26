@@ -1,4 +1,4 @@
-experiment_name: "reg_lgbm_depth1_lr00001_or000"
+experiment_name: "clf_smote_k10_or000"
 random_seed: 42
 
 data:
@@ -72,7 +72,7 @@ classification:
   sampling:
     strategy: "smote"
     smote_ratio: 0.3
-    smote_k_neighbors: 5
+    smote_k_neighbors: 10
   threshold_search:
     min: 0.01
     max: 0.99
