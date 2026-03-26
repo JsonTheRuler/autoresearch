@@ -1,4 +1,4 @@
-experiment_name: "clf_smote04_ageins_d12_or000"
+experiment_name: "clf_smote04_ageins_or000"
 random_seed: 42
 
 data:
@@ -64,7 +64,7 @@ classification:
   target: "BUYI"
   hyperparameters:
     n_estimators: 300
-    max_depth: 12
+    max_depth: 6
     learning_rate: 0.05
     is_unbalance: true
     random_state: 42
