@@ -1,4 +1,4 @@
-experiment_name: "reg_lgbm_depth1_lr00001_or000"
+experiment_name: "clf_xgb_spw5_or000"
 random_seed: 42
 
 data:
@@ -59,15 +59,15 @@ regression:
   smearing_correction: false
 
 classification:
-  model_type: "lightgbm"
+  model_type: "xgboost"
   target: "BUYI"
   hyperparameters:
     n_estimators: 300
     max_depth: 6
     learning_rate: 0.05
-    is_unbalance: true
+    scale_pos_weight: 5
     random_state: 42
-    verbose: -1
+    verbosity: 0
     n_jobs: -1
   sampling:
     strategy: "smote"
