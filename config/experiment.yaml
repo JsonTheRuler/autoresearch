@@ -1,4 +1,4 @@
-experiment_name: "reg_lgbm_alpha1_or30"
+experiment_name: "reg_lgbm_lr02_or30"
 random_seed: 42
 
 data:
@@ -52,8 +52,6 @@ regression:
     learning_rate: 0.2
     subsample: 0.7
     colsample_bytree: 0.7
-    reg_alpha: 0.1
-    reg_lambda: 1.0
     random_state: 42
     verbose: -1
     n_jobs: -1
