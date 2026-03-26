@@ -1,4 +1,4 @@
-experiment_name: "clf_lightgbm"
+experiment_name: "clf_lgbm_smote02"
 random_seed: 42
 
 data:
@@ -71,7 +71,7 @@ classification:
     n_jobs: -1
   sampling:
     strategy: "smote"
-    smote_ratio: 0.3
+    smote_ratio: 0.2
     smote_k_neighbors: 5
   threshold_search:
     min: 0.02
