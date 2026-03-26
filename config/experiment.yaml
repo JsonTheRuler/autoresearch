@@ -1,4 +1,4 @@
-experiment_name: "reg_lgbm_depth1_lr00005_or000"
+experiment_name: "clf_logistic_or000"
 random_seed: 42
 
 data:
@@ -59,24 +59,19 @@ regression:
   smearing_correction: false
 
 classification:
-  model_type: "lightgbm"
+  model_type: "logistic"
   target: "BUYI"
   hyperparameters:
-    n_estimators: 300
-    max_depth: 6
-    learning_rate: 0.05
-    is_unbalance: true
+    C: 1.0
+    max_iter: 1000
     random_state: 42
-    verbose: -1
-    n_jobs: -1
+    class_weight: "balanced"
   sampling:
-    strategy: "smote"
-    smote_ratio: 0.3
-    smote_k_neighbors: 5
+    strategy: "none"
   threshold_search:
     min: 0.01
-    max: 0.30
-    step: 0.005
+    max: 0.98
+    step: 0.01
 
 scaling:
   annual_properties: 200000
