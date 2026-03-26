@@ -1,4 +1,4 @@
-experiment_name: "clf_smote04_ageins_or000"
+experiment_name: "clf_smote04_ageins_k10_or000"
 random_seed: 42
 
 data:
@@ -73,7 +73,7 @@ classification:
   sampling:
     strategy: "smote"
     smote_ratio: 0.4
-    smote_k_neighbors: 5
+    smote_k_neighbors: 10
   threshold_search:
     min: 0.01
     max: 0.99
