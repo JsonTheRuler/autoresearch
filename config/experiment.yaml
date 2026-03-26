@@ -1,4 +1,4 @@
-experiment_name: "reg_lgbm_depth1_lr00001_or000"
+experiment_name: "clf_fewer_ins_features_or000"
 random_seed: 42
 
 data:
@@ -32,8 +32,6 @@ features:
     - HAS_AMENITIES
     - HAS_BASEMENT
   insurance_extra:
-    - HOUSING_BURDEN
-    - INCOME_SOURCES
     - LOG_ZINC2
     - LOG_VALUE
   drop_high_nan:
