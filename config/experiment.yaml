@@ -1,4 +1,4 @@
-experiment_name: "baseline"
+experiment_name: "clf_spw25"
 random_seed: 42
 
 data:
@@ -65,7 +65,7 @@ classification:
     n_estimators: 300
     max_depth: 6
     learning_rate: 0.05
-    scale_pos_weight: 1
+    scale_pos_weight: 25
     random_state: 42
     verbosity: 0
     eval_metric: "logloss"
