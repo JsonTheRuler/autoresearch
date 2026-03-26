@@ -1,4 +1,4 @@
-experiment_name: "reg_lgbm_depth1_lr00005_or000"
+experiment_name: "clf_lgbm_fullthresh_or000"
 random_seed: 42
 
 data:
@@ -75,8 +75,8 @@ classification:
     smote_k_neighbors: 5
   threshold_search:
     min: 0.01
-    max: 0.30
-    step: 0.005
+    max: 0.99
+    step: 0.01
 
 scaling:
   annual_properties: 200000
