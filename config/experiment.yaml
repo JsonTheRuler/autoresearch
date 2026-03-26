@@ -1,4 +1,4 @@
-experiment_name: "reg_lgbm_l96_lr001_or005"
+experiment_name: "reg_lgbm_l96_lr001_sub075_or005"
 random_seed: 42
 
 data:
@@ -51,8 +51,8 @@ regression:
     num_leaves: 96
     max_depth: -1
     learning_rate: 0.01
-    subsample: 0.7
-    colsample_bytree: 0.7
+    subsample: 0.75
+    colsample_bytree: 0.75
     random_state: 42
     verbose: -1
     n_jobs: -1
