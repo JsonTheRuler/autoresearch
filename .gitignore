@@ -21,6 +21,10 @@ dev/
 # Results and logs (untracked, generated at runtime)
 results.tsv
 experiments/results.tsv
+experiments/history.jsonl
+experiments/best_results.json
+experiments/notes.md
 experiments/run_*.log
+experiments/logs/*.log
 experiments/loop_output.log
 run.log
