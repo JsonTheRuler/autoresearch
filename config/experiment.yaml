@@ -1,4 +1,4 @@
-experiment_name: "clf_lgbm_finethresh"
+experiment_name: "reg_lgbm_lr005"
 random_seed: 42
 
 data:
@@ -47,9 +47,9 @@ features:
 regression:
   model_type: "lightgbm"
   hyperparameters:
-    n_estimators: 600
+    n_estimators: 800
     max_depth: -1
-    learning_rate: 0.03
+    learning_rate: 0.05
     subsample: 0.8
     colsample_bytree: 0.8
     random_state: 42
