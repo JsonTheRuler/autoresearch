@@ -1,4 +1,4 @@
-experiment_name: "reg_lgbm_depth1_lr00005_sub09_or005"
+experiment_name: "reg_lgbm_depth1_lr00005_or005"
 random_seed: 42
 
 data:
@@ -50,8 +50,8 @@ regression:
     n_estimators: 3000
     max_depth: 1
     learning_rate: 0.0005
-    subsample: 0.9
-    colsample_bytree: 0.9
+    subsample: 0.75
+    colsample_bytree: 0.75
     random_state: 42
     verbose: -1
     n_jobs: -1
