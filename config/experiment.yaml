@@ -1,4 +1,4 @@
-experiment_name: "reg_lgbm_lr005_2500"
+experiment_name: "reg_lgbm_lr005_3000"
 random_seed: 42
 
 data:
@@ -47,7 +47,7 @@ features:
 regression:
   model_type: "lightgbm"
   hyperparameters:
-    n_estimators: 2500
+    n_estimators: 3000
     max_depth: -1
     learning_rate: 0.05
     subsample: 0.8
