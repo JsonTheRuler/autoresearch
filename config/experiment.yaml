@@ -1,114 +1,83 @@
-# AHS Autoresearch Experiment Configuration
-# Edit this file to try new experiments
+experiment_name: "baseline"
+random_seed: 42
 
 data:
   price_file: "data/raw/ahs_price_sample.xlsx"
   insurance_file: "data/raw/ahs_insurance_sample.xlsx"
-  test_size: 0.2
-  random_state: 42
+  survey_codes_to_nan: [-9, -8, -7]
+  na_code_handling:
+    CELLAR: 0
+    CLIMB: 0
+    CONFEE: 0
+    default: "nan"
+  outlier_percentiles: [0.01, 0.99]
+  test_size: 0.20
+  validation_size: 0.20
 
-# AHS codebook preprocessing
 preprocessing:
-  # Binary columns: AHS uses 1=Yes, 2=No → recode to 1/0
-  binary_columns:
-    - BUYI       # Buying intention
-    - CELLAR     # Has cellar/basement
-    - GARAGE     # Has garage
-    - PORCH      # Has porch
-    - CONDO      # Is condominium
-    - MOBILHOME  # Is mobile home
+  binary_recode: true
+  condo_recode: true
+  built_midpoints: true
+  impute_strategy: "median"
+  scale_numerical: true
+  onehot_categorical: true
 
-  # Columns where -6 means "Not applicable" → NaN
-  na_sentinel: -6
+features:
+  enabled_engineered:
+    - AGE
+    - LOG_UNITSF
+    - LOG_LOT
+    - ROOMS_PER_BATH
+    - TOTAL_PROBLEMS
+    - HAS_AMENITIES
+    - HAS_BASEMENT
+  insurance_extra:
+    - HOUSING_BURDEN
+    - INCOME_SOURCES
+    - LOG_ZINC2
+    - LOG_VALUE
+  drop_high_nan:
+    - CLIMB
+    - ELEV
+    - MOBILTYP
+    - INCP
+  drop_leakage:
+    - AMTI
 
-  # BUILT column: range codes → midpoint years
-  built_midpoints:
-    1: 2020   # 2020 or later
-    2: 2017   # 2015-2019
-    3: 2012   # 2010-2014
-    4: 2007   # 2005-2009
-    5: 2002   # 2000-2004
-    6: 1997   # 1995-1999
-    7: 1992   # 1990-1994
-    8: 1987   # 1985-1989
-    9: 1982   # 1980-1984
-    10: 1977  # 1975-1979
-    11: 1972  # 1970-1974
-    12: 1967  # 1965-1969
-    13: 1962  # 1960-1964
-    14: 1955  # 1950-1959
-    15: 1945  # 1940-1949
-    16: 1935  # 1930-1939
-    17: 1920  # 1920-1929
-    18: 1910  # Before 1920
-
-# Price prediction task
-price_model:
-  name: "xgboost"           # xgboost | lightgbm | random_forest | ridge
-  target: "VALUE"
-  features:
-    - UNITSF      # Square footage
-    - LOT         # Lot size
-    - ROOMS       # Number of rooms
-    - BEDRMS      # Number of bedrooms
-    - BATHS       # Number of bathrooms
-    - BUILT       # Year built (after midpoint conversion)
-    - GARAGE      # Has garage (binary)
-    - CELLAR      # Has cellar (binary)
-    - PORCH       # Has porch (binary)
-    - STORIES     # Number of stories
-    - REGION      # Census region
-  hyperparams:
-    n_estimators: 500
-    max_depth: 6
-    learning_rate: 0.05
+regression:
+  model_type: "lightgbm"
+  hyperparameters:
+    n_estimators: 600
+    max_depth: -1
+    learning_rate: 0.03
     subsample: 0.8
     colsample_bytree: 0.8
-    min_child_weight: 5
-    reg_alpha: 0.1
-    reg_lambda: 1.0
-
-# Insurance task
-insurance_model:
-  name: "lightgbm"          # xgboost | lightgbm | random_forest | ridge
-  target: "AMTI"            # Annual insurance premium
-  features:
-    - VALUE       # Property value
-    - UNITSF      # Square footage
-    - LOT         # Lot size
-    - BUILT       # Year built
-    - ROOMS       # Rooms
-    - BATHS       # Bathrooms
-    - REGION      # Census region
-    - CELLAR      # Has cellar
-    - GARAGE      # Has garage
-    - STORIES     # Stories
-  hyperparams:
-    n_estimators: 500
-    max_depth: 6
-    learning_rate: 0.05
-    subsample: 0.8
-    colsample_bytree: 0.8
-    min_child_samples: 10
-    reg_alpha: 0.1
-    reg_lambda: 1.0
+    random_state: 42
     verbose: -1
+    n_jobs: -1
+  offer_rate: 0.82
+  smearing_correction: true
 
-# Profit scoring thresholds
-scoring:
-  # Price task: profit = how much we'd earn flipping undervalued homes
-  price_profit:
-    buy_threshold_pct: -0.10    # Buy if predicted value > actual by 10%+
-    transaction_cost_pct: 0.06  # 6% transaction costs (agent fees, closing)
-    max_investment: 500000      # Cap per property
+classification:
+  model_type: "xgboost"
+  target: "BUYI"
+  hyperparameters:
+    n_estimators: 300
+    max_depth: 6
+    learning_rate: 0.05
+    scale_pos_weight: 1
+    random_state: 42
+    verbosity: 0
+    eval_metric: "logloss"
+    n_jobs: -1
+  sampling:
+    strategy: "smote"
+    smote_ratio: 0.3
+    smote_k_neighbors: 5
+  threshold_search:
+    min: 0.02
+    max: 0.98
+    step: 0.02
 
-  # Insurance task: profit from identifying under-priced policies
-  insurance_profit:
-    underprice_threshold_pct: 0.15  # Flag if predicted premium > actual by 15%+
-    adjustment_capture_pct: 0.25   # We capture 25% of the gap as profit
-    min_premium_gap: 200           # Minimum $ gap to flag
-
-  # Combined metric weights
-  weights:
-    price_profit: 0.6
-    insurance_profit: 0.4
+scaling:
+  annual_properties: 200000

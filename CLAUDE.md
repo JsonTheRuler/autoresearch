@@ -1,41 +1,19 @@
-# AHS Autoresearch — Claude Code Instructions
+# AHS Housing ML AutoResearch
 
-This repo runs **autonomous ML experiments** on American Housing Survey (AHS) data.
-Claude Code auto-loads this file on every session.
+You are an autonomous ML research agent optimizing two models on AHS housing data.
 
-## Goal
-Maximize `combined_annual_profit` — a business metric combining price-prediction
-profit and insurance under-pricing detection profit.
-
-## Key files
-| File | Purpose |
-|------|---------|
-| `config/experiment.yaml` | All experiment settings — models, features, thresholds |
-| `src/pipeline_runner.py` | Main entry point — reads YAML, orchestrates experiment |
-| `src/data_loader.py` | Codebook-informed preprocessing (binary 1/2→1/0, -6→NaN, BUILT midpoints) |
-| `src/evaluation.py` | Profit-based scorers for price and insurance tasks |
-| `src/model_factory.py` | Model registry — XGBoost, LightGBM, RandomForest, Ridge |
-| `program.md` | 6-phase autonomous research plan |
-| `run_loop.sh` | Overnight loop runner |
-| `data/raw/` | Excel data files (ahs_price_sample.xlsx, ahs_insurance_sample.xlsx) |
-| `experiments/results.tsv` | Cumulative experiment log |
-
-## Experiment loop
-1. Edit `config/experiment.yaml` (or `src/` code) with a new idea
-2. Run `python src/pipeline_runner.py`
-3. Check the `METRIC combined_annual_profit=...` output
-4. If improved → commit & keep. If worse → revert.
-5. Log to `experiments/results.tsv`
-6. Repeat indefinitely.
+## First Action Every Session
+Read `program.md` for full instructions, then read `experiments/results.tsv` and `experiments/history.jsonl` to understand what has been tried.
 
 ## Rules
-- **Never stop** to ask the human. Run autonomously until interrupted.
-- The YAML config is the primary knob — change features, models, thresholds, hyperparams there.
-- The `src/` modules can also be modified for deeper changes (new scorers, feature engineering, etc.)
-- Keep changes small and measurable. One idea per experiment.
+- ONLY modify files in `config/` directory
+- NEVER modify files in `src/` or `data/`
+- ALWAYS validate config before training: `python src/config_validator.py`
+- Git commit before and after every experiment
+- Primary metric: `combined_annual_profit` (higher = better)
+- If an experiment crashes or regresses, `git revert HEAD` immediately
 
-## AHS data notes
-- Binary columns use AHS coding: 1 = Yes, 2 = No → recode to 1/0
-- Code -6 means "Not applicable" → treat as NaN
-- BUILT is a range code → convert to midpoint year
-- Key columns: VALUE, BUYI, AMTI, UNITSF, LOT, ROOMS, BATHS, CELLAR, GARAGE, etc.
+## Quick Reference
+- Run experiment: `python src/pipeline_runner.py 2>&1 | tee experiments/logs/run_$(date +%s).log`
+- Check best: `cat experiments/best_results.json`
+- Check history: `tail -20 experiments/results.tsv`

@@ -1,69 +1,108 @@
-# AHS Autoresearch — 6-Phase Research Plan
+# AHS Housing ML AutoResearch Program
 
-## Overview
-Autonomous ML research on American Housing Survey (AHS) data to maximize
-`combined_annual_profit` — a business metric combining property value prediction
-profit and insurance under-pricing detection profit.
+## Objective
+Maximize combined annual profit from two models on the 2011 AHS housing survey:
+1. **Regression**: predict Ln(VALUE) (house prices). Offer k% of smearing-corrected predicted value.
+2. **Classification**: predict BUYI (insurance purchase). Optimize threshold for profit.
 
-## Phase 1: Baseline Establishment
-**Goal**: Run the default config and record baseline metrics.
-1. Run `python src/pipeline_runner.py` with default `config/experiment.yaml`
-2. Record the `combined_annual_profit` as the baseline
-3. Commit as "baseline" in `experiments/results.tsv`
+- **PRIMARY METRIC**: `combined_annual_profit` (printed by `src/pipeline_runner.py`)
+- Higher is better. Extract from stdout: `grep '^METRIC combined_annual_profit=' run.log`
+- Scale: 200,000 properties per year (5% of 4M US home sales)
 
-## Phase 2: Feature Engineering
-**Goal**: Improve features fed to the models.
-Ideas to try:
-- Interaction features: UNITSF × LOT, ROOMS × BATHS
-- Price-per-sqft: VALUE / UNITSF
-- Age of structure: current_year - BUILT
-- Log transforms of skewed features (VALUE, UNITSF, LOT)
-- Polynomial features for key predictors
-- Binning continuous variables (LOT size categories, age buckets)
+## Setup (Run Once at Start of Session)
+1. Read ALL files in `src/` to understand the pipeline — do NOT modify them
+2. Read `config/experiment.yaml` for current configuration
+3. Read `experiments/history.jsonl` and `experiments/results.tsv` for past experiments
+4. If no history exists, run baseline: `python src/pipeline_runner.py 2>&1 | tee experiments/logs/baseline.log`
+5. Record baseline in results.tsv
 
-## Phase 3: Model Selection & Tuning
-**Goal**: Find the best model and hyperparameters for each task.
-- Try all 4 models: XGBoost, LightGBM, RandomForest, Ridge
-- Grid search key hyperparameters in YAML
-- Tune separately for price vs insurance (they may want different models)
-- Consider ensemble/stacking if individual models plateau
+## File Permissions
+- **MUTABLE**: `config/experiment.yaml` (hyperparameters, model selection, sampling)
+- **MUTABLE**: `config/features/engineered.yaml` (add/remove engineered features)
+- **READ-ONLY**: `src/*.py` (pipeline code, evaluation, data loading)
+- **READ-ONLY**: `data/` (raw AHS data files)
+- **DO NOT**: install new packages, modify evaluation code, change data splits, touch src/
 
-## Phase 4: Threshold Optimization
-**Goal**: Tune the profit scoring thresholds.
-- `buy_threshold_pct`: try 0.05, 0.10, 0.15, 0.20
-- `transaction_cost_pct`: model realistic vs optimistic scenarios
-- `underprice_threshold_pct`: try 0.10, 0.15, 0.20, 0.25
-- `adjustment_capture_pct`: sensitivity analysis
-- `min_premium_gap`: try 100, 200, 500
+## Business Context
+- Rockafella's Properties buys and sells 200,000 homes/year
+- Current baseline: static formula predicting Ln(VALUE), offer 90% of predicted price
+- Insurance division: earn 30% margin on AMTI for true positives, -$500 per false positive, -$2,000 per false negative
+- Status quo: no insurance offered (costs $2,000 per potential buyer)
 
-## Phase 5: Advanced Techniques
-**Goal**: Push the frontier with more sophisticated approaches.
-- Target encoding for categorical features
-- Feature selection via importance/SHAP
-- Quantile regression for confidence intervals
-- Custom loss functions aligned with profit metric
-- Time-aware splits if YEAR column is meaningful
+## Constraints
+- Each experiment must complete within 5 minutes wall-clock
+- random_seed: 42 everywhere for reproducibility
+- Prefer simpler configs at equal performance
+- Maximum 3 new engineered features per experiment
+- Do not use AMTI as a classification feature (target leakage)
 
-## Phase 6: Robustness & Validation
-**Goal**: Ensure results are stable and not overfit.
-- K-fold cross-validation (5 or 10 folds)
-- Multiple random seeds
-- Check for data leakage
-- Feature importance analysis
-- Final model documentation
+## Research Directions (Priority Order)
 
-## Experiment Loop Protocol
+### Phase 1: Model Selection (experiments 1-8)
+Try each model with reasonable defaults for BOTH regression and classification:
+- LightGBM, XGBoost, RandomForest, Ridge/LogisticRegression
+- For classification: also try scale_pos_weight in {1, 10, 25}
+- Identify best model family for each task
+
+### Phase 2: Sampling Strategy (experiments 9-14)
+For classification only (BUYI is 96.2% imbalanced):
+- SMOTE with sampling_strategy in {0.2, 0.3, 0.5}
+- No resampling + class_weight='balanced'
+- Random undersampling
+- Pick best sampling strategy, fix it for later phases
+
+### Phase 3: Feature Engineering (experiments 15-30)
+- Log transforms: LOG_UNITSF, LOG_LOT, LOG_ZINC2, LOG_VALUE
+- AGE = 2011 - BUILT (with decade midpoint adjustment)
+- Ratios: ROOMS_PER_BATH, LOT_PER_SQFT
+- Composite: TOTAL_PROBLEMS (sum of EVROD+EROACH+CRACKS+HOLES)
+- Composite: HAS_AMENITIES (sum of DISH+AIRSYS+GARAGE+PORCH+DISPL)
+- HAS_BASEMENT = CELLAR in {1, 2}
+- HOUSING_BURDEN = ZSMHC / (ZINC2/12)
+- Drop features with <0.5% importance
+- Try interaction terms between top-3 features
+
+### Phase 4: Hyperparameter Tuning (experiments 31-60)
+For the best model + features + sampling:
+- learning_rate: [0.01, 0.03, 0.05, 0.1, 0.2]
+- max_depth: [3, 5, 7, 9, -1]
+- n_estimators: [200, 400, 600, 800, 1000]
+- subsample: [0.6, 0.7, 0.8, 0.9, 1.0]
+- colsample_bytree: [0.6, 0.7, 0.8, 0.9, 1.0]
+- reg_alpha: [0, 0.1, 1, 10]
+- reg_lambda: [0, 0.1, 1, 10]
+
+### Phase 5: Offer Rate + Threshold Fine-Tuning (experiments 61-75)
+- Offer rate k: [0.80, 0.82, 0.85, 0.88, 0.90, 0.92, 0.95]
+- Classification threshold: fine search with step=0.005 around current optimum
+- Smearing factor recalculation with new model
+
+### Phase 6: Ensembles (experiments 76-100)
+- Weighted average of top-2 regression models
+- Stacking with Ridge meta-learner
+- Blending predictions on validation set
+
+## Anti-Patterns (DO NOT)
+- Do not use AMTI as a classification feature (deterministic leakage)
+- Do not set max_depth > 15 (overfitting on 50K rows)
+- Do not set n_estimators > 3000 (timeout risk)
+- If 3 consecutive experiments fail to improve, switch to next research phase
+- Do not try deep learning / neural networks
+- Do not modify the profit calculation logic
+
+## Experiment Loop
 ```
-LOOP FOREVER:
-1. Pick an idea from the current phase
-2. Edit config/experiment.yaml (or src/ code)
-3. git commit
-4. python src/pipeline_runner.py > run.log 2>&1
-5. grep "METRIC combined_annual_profit" run.log
-6. If improved → keep commit, log "keep" in results.tsv
-7. If worse → git reset, log "discard" in results.tsv
-8. If crash → check tail -50 run.log, fix or skip
-9. Move to next idea
+REPEAT:
+  1. Read experiments/history.jsonl and results.tsv
+  2. Decide next experiment (follow Research Directions phases)
+  3. Modify config/experiment.yaml
+  4. git add config/ && git commit -m "experiment: <description>"
+  5. python src/pipeline_runner.py 2>&1 | tee experiments/logs/exp_$(date +%s).log
+  6. Extract: grep '^METRIC combined_annual_profit=' <logfile>
+  7. IF improved over best → keep, update experiments/best_results.json
+     IF equal/worse → git revert HEAD --no-edit
+     IF crashed → git revert HEAD --no-edit
+  8. Append result to experiments/results.tsv and experiments/history.jsonl
+  9. Every 10 experiments: summarize findings so far in experiments/notes.md
+  10. GOTO 1
 ```
-
-**NEVER STOP** — run autonomously until manually interrupted.

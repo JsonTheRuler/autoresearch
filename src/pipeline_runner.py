@@ -1,189 +1,182 @@
-"""
-AHS Autoresearch Pipeline Runner
-
-Reads config/experiment.yaml, loads AHS data with codebook preprocessing,
-trains models, evaluates with profit-based scoring, and logs results.
-"""
-
+"""pipeline_runner.py — Immutable pipeline orchestrator."""
 import sys
+import yaml
+import json
 import time
-import hashlib
-from datetime import datetime
-from pathlib import Path
-
 import numpy as np
-from sklearn.model_selection import train_test_split
+import pandas as pd
+from pathlib import Path
+from datetime import datetime
 
-from data_loader import load_config, load_and_preprocess, prepare_features
+from data_loader import load_and_preprocess
+from feature_engine import build_features
 from model_factory import create_model
-from evaluation import (
-    compute_regression_metrics,
-    compute_price_profit,
-    compute_insurance_profit,
-    compute_combined_profit,
-)
-
-ROOT = Path(__file__).resolve().parent.parent
-EXPERIMENTS_DIR = ROOT / "experiments"
-RESULTS_FILE = EXPERIMENTS_DIR / "results.tsv"
-
-
-def run_task(config, task_key, df):
-    """Run a single prediction task (price or insurance)."""
-    task_cfg = config[task_key]
-    model_name = task_cfg["name"]
-    target = task_cfg["target"]
-    features = task_cfg["features"]
-    hyperparams = task_cfg.get("hyperparams", {})
-
-    print(f"\n{'='*50}")
-    print(f"  Task: {task_key} | Model: {model_name} | Target: {target}")
-    print(f"{'='*50}")
-
-    # Prepare features
-    X, y = prepare_features(df, features, target)
-    print(f"  Samples: {len(X)} | Features: {X.shape[1]}")
-
-    if len(X) < 10:
-        print(f"  ERROR: Too few samples ({len(X)}). Skipping task.")
-        return None
-
-    # Split
-    test_size = config["data"].get("test_size", 0.2)
-    random_state = config["data"].get("random_state", 42)
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=test_size, random_state=random_state
-    )
-    print(f"  Train: {len(X_train)} | Test: {len(X_test)}")
-
-    # Train
-    model = create_model(model_name, hyperparams)
-    start_time = time.time()
-    model.fit(X_train, y_train)
-    train_time = time.time() - start_time
-
-    # Predict
-    y_pred = model.predict(X_test)
-
-    # Regression metrics
-    metrics = compute_regression_metrics(y_test, y_pred)
-    print(f"  RMSE:  {metrics['rmse']:>12,.2f}")
-    print(f"  MAE:   {metrics['mae']:>12,.2f}")
-    print(f"  R2:    {metrics['r2']:>12.4f}")
-    print(f"  MAPE:  {metrics['mape']:>12.2f}%")
-    print(f"  Time:  {train_time:.2f}s")
-
-    return {
-        "model_name": model_name,
-        "target": target,
-        "metrics": metrics,
-        "y_test": y_test,
-        "y_pred": y_pred,
-        "train_time": train_time,
-        "n_train": len(X_train),
-        "n_test": len(X_test),
-    }
-
-
-def log_results(run_id, timestamp, config, price_result, insurance_result, combined_profit):
-    """Append results to experiments/results.tsv."""
-    EXPERIMENTS_DIR.mkdir(parents=True, exist_ok=True)
-
-    header = "run_id\ttimestamp\tprice_model\tinsurance_model\tprice_rmse\tprice_r2\tinsurance_rmse\tinsurance_r2\tprice_profit\tinsurance_profit\tcombined_annual_profit\tstatus\tdescription\n"
-
-    if not RESULTS_FILE.exists():
-        with open(RESULTS_FILE, "w") as f:
-            f.write(header)
-
-    price_cfg = config["price_model"]
-    insur_cfg = config["insurance_model"]
-
-    p_rmse = price_result["metrics"]["rmse"] if price_result else 0
-    p_r2 = price_result["metrics"]["r2"] if price_result else 0
-    i_rmse = insurance_result["metrics"]["rmse"] if insurance_result else 0
-    i_r2 = insurance_result["metrics"]["r2"] if insurance_result else 0
-
-    price_profit = 0
-    insur_profit = 0
-    if price_result:
-        pp = compute_price_profit(price_result["y_test"], price_result["y_pred"], config)
-        price_profit = pp["total_profit"]
-    if insurance_result:
-        ip = compute_insurance_profit(insurance_result["y_test"], insurance_result["y_pred"], config)
-        insur_profit = ip["total_profit"]
-
-    status = "keep" if combined_profit > 0 else "discard"
-    desc = f"{price_cfg['name']}+{insur_cfg['name']}"
-
-    row = f"{run_id}\t{timestamp}\t{price_cfg['name']}\t{insur_cfg['name']}\t{p_rmse:.2f}\t{p_r2:.4f}\t{i_rmse:.2f}\t{i_r2:.4f}\t{price_profit:.2f}\t{insur_profit:.2f}\t{combined_profit:.2f}\t{status}\t{desc}\n"
-
-    with open(RESULTS_FILE, "a") as f:
-        f.write(row)
-
-    print(f"\n  Results logged to {RESULTS_FILE}")
-
+from evaluation import (regression_profit, classification_profit,
+                        sweep_thresholds, compute_smearing_factor)
 
 def main():
-    config_path = ROOT / "config" / "experiment.yaml"
+    start = time.time()
+
+    # Load config
+    config_path = Path("config/experiment.yaml")
     if not config_path.exists():
-        print(f"ERROR: Config not found: {config_path}")
+        print("ERROR: config/experiment.yaml not found")
         sys.exit(1)
 
-    config = load_config(str(config_path))
+    with open(config_path) as f:
+        cfg = yaml.safe_load(f)
 
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    run_id = hashlib.md5(timestamp.encode()).hexdigest()[:8]
+    print(f"Experiment: {cfg['experiment_name']}")
+    print(f"Regression: {cfg['regression']['model_type']}")
+    print(f"Classification: {cfg['classification']['model_type']}")
+    seed = cfg['random_seed']
+    np.random.seed(seed)
 
-    print("=" * 60)
-    print("  AHS Autoresearch Pipeline")
-    print(f"  Run ID: {run_id}")
-    print(f"  Started: {timestamp}")
-    print("=" * 60)
+    # ========== DATA LOADING ==========
+    price_data, insurance_data = load_and_preprocess(cfg)
 
-    # Load data
-    print("\nLoading data...")
-    df_price, df_insurance = load_and_preprocess(config)
+    X_train_p, X_val_p, X_hold_p = price_data['X_train'], price_data['X_val'], price_data['X_hold']
+    y_train_p, y_val_p, y_hold_p = price_data['y_train'], price_data['y_val'], price_data['y_hold']
 
-    # Run price prediction
-    price_result = run_task(config, "price_model", df_price)
+    X_train_i, X_val_i, X_hold_i = insurance_data['X_train'], insurance_data['X_val'], insurance_data['X_hold']
+    y_train_i, y_val_i, y_hold_i = insurance_data['y_train'], insurance_data['y_val'], insurance_data['y_hold']
+    amti_val, amti_hold = insurance_data['amti_val'], insurance_data['amti_hold']
+    X_resampled, y_resampled = insurance_data.get('X_resampled'), insurance_data.get('y_resampled')
 
-    # Run insurance prediction
-    insurance_result = run_task(config, "insurance_model", df_insurance)
+    # Feature names for logging
+    feat_names_p = price_data.get('feature_names', [])
+    feat_names_i = insurance_data.get('feature_names', [])
 
-    # Compute profits
-    print(f"\n{'='*50}")
-    print("  PROFIT SCORING")
-    print(f"{'='*50}")
+    print(f"Price: train={X_train_p.shape}, val={X_val_p.shape}, hold={X_hold_p.shape}")
+    print(f"Insurance: train={X_train_i.shape}, val={X_val_i.shape}, hold={X_hold_i.shape}")
 
-    price_profit_result = {"total_profit": 0.0, "num_trades": 0}
-    insurance_profit_result = {"total_profit": 0.0, "num_flagged": 0}
+    # ========== REGRESSION ==========
+    print("\n--- REGRESSION ---")
+    reg_model = create_model(cfg['regression'])
+    reg_model.fit(X_train_p, y_train_p)
 
-    if price_result:
-        price_profit_result = compute_price_profit(
-            price_result["y_test"], price_result["y_pred"], config
+    # Smearing correction
+    if cfg['regression'].get('smearing_correction', True):
+        smearing = compute_smearing_factor(y_train_p, reg_model.predict(X_train_p))
+    else:
+        smearing = 1.0
+    print(f"Smearing factor: {smearing:.4f}")
+
+    # Holdout predictions
+    reg_pred_hold = reg_model.predict(X_hold_p)
+    offer_rate = cfg['regression'].get('offer_rate', 0.90)
+
+    reg_metrics = regression_profit(
+        y_hold_p, reg_pred_hold,
+        smearing_factor=smearing,
+        offer_rate=offer_rate,
+        n_annual=cfg['scaling']['annual_properties']
+    )
+
+    for k, v in reg_metrics.items():
+        print(f"  {k}: {v}")
+
+    # Baseline comparison
+    baseline_data = price_data.get('baseline_pred')
+    if baseline_data is not None:
+        bl_metrics = regression_profit(
+            y_hold_p, baseline_data,
+            smearing_factor=1.0,
+            offer_rate=0.90,
+            n_annual=cfg['scaling']['annual_properties']
         )
-        print(f"  Price profit:     ${price_profit_result['total_profit']:>12,.2f}  ({price_profit_result['num_trades']} trades)")
+        print(f"  baseline_annual_profit: {bl_metrics['annual_profit']}")
 
-    if insurance_result:
-        insurance_profit_result = compute_insurance_profit(
-            insurance_result["y_test"], insurance_result["y_pred"], config
-        )
-        print(f"  Insurance profit: ${insurance_profit_result['total_profit']:>12,.2f}  ({insurance_profit_result['num_flagged']} flagged)")
+    # Feature importance
+    if hasattr(reg_model, 'feature_importances_') and len(feat_names_p) > 0:
+        imp = sorted(zip(feat_names_p, reg_model.feature_importances_),
+                     key=lambda x: x[1], reverse=True)[:10]
+        print(f"  top_features: {[f[0] for f in imp]}")
 
-    combined = compute_combined_profit(price_profit_result, insurance_profit_result, config)
+    # ========== CLASSIFICATION ==========
+    print("\n--- CLASSIFICATION ---")
+    clf_model = create_model(cfg['classification'])
 
-    print(f"\n  METRIC combined_annual_profit={combined:.2f}")
-    print()
+    # Use resampled data if available, else original
+    if X_resampled is not None and cfg['classification']['sampling']['strategy'] != 'none':
+        clf_model.fit(X_resampled, y_resampled)
+        print(f"  Trained on resampled data ({len(y_resampled)} samples)")
+    else:
+        clf_model.fit(X_train_i, y_train_i)
+        print(f"  Trained on original data ({len(y_train_i)} samples)")
 
-    # Log
-    log_results(run_id, timestamp, config, price_result, insurance_result, combined)
+    # Threshold sweep on validation
+    val_proba = clf_model.predict_proba(X_val_i)[:, 1]
+    thresh_cfg = cfg['classification'].get('threshold_search', {})
+    best_threshold, val_profit = sweep_thresholds(
+        y_val_i, val_proba, amti_val,
+        t_min=thresh_cfg.get('min', 0.02),
+        t_max=thresh_cfg.get('max', 0.98),
+        t_step=thresh_cfg.get('step', 0.02)
+    )
+    print(f"  Best threshold (validation): {best_threshold:.3f}")
+    print(f"  Validation profit: {val_profit:,.0f}")
 
-    print("\n" + "=" * 60)
-    print("  Pipeline complete!")
-    print("=" * 60)
+    # Holdout evaluation
+    hold_proba = clf_model.predict_proba(X_hold_i)[:, 1]
+    clf_metrics = classification_profit(
+        y_hold_i, hold_proba, amti_hold,
+        threshold=best_threshold,
+        n_annual=cfg['scaling']['annual_properties']
+    )
 
-    return combined
+    for k, v in clf_metrics.items():
+        print(f"  {k}: {v}")
 
+    # Status quo and offer-all benchmarks
+    sq = -2000 * int((y_hold_i == 1).sum())
+    sf = cfg['scaling']['annual_properties'] / len(y_hold_i)
+    offer_all = classification_profit(
+        y_hold_i, np.ones(len(y_hold_i)), amti_hold,
+        threshold=0.5, n_annual=cfg['scaling']['annual_properties']
+    )
+    print(f"  status_quo_holdout: {sq}")
+    print(f"  offer_all_holdout: {offer_all['holdout_profit']}")
 
-if __name__ == "__main__":
+    # ========== COMBINED METRICS ==========
+    combined = reg_metrics['annual_profit'] + clf_metrics['annual_profit']
+
+    elapsed = time.time() - start
+    print(f"\n--- COMBINED ---")
+    print(f"METRIC combined_annual_profit={combined:.0f}")
+    print(f"METRIC reg_annual_profit={reg_metrics['annual_profit']:.0f}")
+    print(f"METRIC clf_annual_profit={clf_metrics['annual_profit']:.0f}")
+    print(f"METRIC reg_holdout_r2={reg_metrics['r2']:.4f}")
+    print(f"METRIC clf_holdout_auc={clf_metrics['auc']:.4f}")
+    print(f"METRIC optimal_threshold={best_threshold:.3f}")
+    print(f"METRIC offer_rate={offer_rate:.2f}")
+    print(f"METRIC smearing_factor={smearing:.4f}")
+    print(f"METRIC elapsed_seconds={elapsed:.1f}")
+    print(f"METRIC experiment_name={cfg['experiment_name']}")
+
+    # Log to history
+    log_entry = {
+        'timestamp': datetime.now().isoformat(),
+        'experiment_name': cfg['experiment_name'],
+        'combined_annual_profit': combined,
+        'reg_annual_profit': reg_metrics['annual_profit'],
+        'clf_annual_profit': clf_metrics['annual_profit'],
+        'reg_model': cfg['regression']['model_type'],
+        'clf_model': cfg['classification']['model_type'],
+        'reg_r2': reg_metrics['r2'],
+        'clf_auc': clf_metrics['auc'],
+        'threshold': best_threshold,
+        'offer_rate': offer_rate,
+        'smearing': smearing,
+        'elapsed': elapsed,
+        'config': cfg
+    }
+
+    history_path = Path("experiments/history.jsonl")
+    with open(history_path, 'a') as f:
+        f.write(json.dumps(log_entry, default=str) + '\n')
+
+    print(f"\nExperiment completed in {elapsed:.1f}s")
+
+if __name__ == '__main__':
     main()

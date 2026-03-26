@@ -1,0 +1,19 @@
+# Engineered Features Definition
+# The agent can add/remove features here
+# Each feature must be implemented in data_loader._add_engineered_features
+
+price_features:
+  - AGE
+  - LOG_UNITSF
+  - LOG_LOT
+  - ROOMS_PER_BATH
+  - TOTAL_PROBLEMS
+  - HAS_AMENITIES
+  - HAS_BASEMENT
+
+insurance_extra_features:
+  - HOUSING_BURDEN
+  - INCOME_SOURCES
+  - LOG_ZINC2
+  - LOG_VALUE
+  - AGE_INS
