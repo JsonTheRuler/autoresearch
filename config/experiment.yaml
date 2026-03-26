@@ -1,4 +1,4 @@
-experiment_name: "clf_smote_ratio04_or000"
+experiment_name: "clf_smote_ratio035_or000"
 random_seed: 42
 
 data:
@@ -71,7 +71,7 @@ classification:
     n_jobs: -1
   sampling:
     strategy: "smote"
-    smote_ratio: 0.4
+    smote_ratio: 0.35
     smote_k_neighbors: 5
   threshold_search:
     min: 0.01
