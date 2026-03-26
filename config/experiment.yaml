@@ -1,4 +1,4 @@
-experiment_name: "clf_lgbm_min_data20_or000"
+experiment_name: "reg_lgbm_depth1_lr00001_or000"
 random_seed: 42
 
 data:
@@ -65,7 +65,6 @@ classification:
     n_estimators: 300
     max_depth: 6
     learning_rate: 0.05
-    min_child_samples: 20
     is_unbalance: true
     random_state: 42
     verbose: -1
