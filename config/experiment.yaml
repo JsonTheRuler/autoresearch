@@ -1,4 +1,4 @@
-experiment_name: "clf_smote04_depth7_or000"
+experiment_name: "clf_smote_ratio04_or000"
 random_seed: 42
 
 data:
@@ -62,9 +62,9 @@ classification:
   model_type: "lightgbm"
   target: "BUYI"
   hyperparameters:
-    n_estimators: 400
-    max_depth: 7
-    learning_rate: 0.04
+    n_estimators: 300
+    max_depth: 6
+    learning_rate: 0.05
     is_unbalance: true
     random_state: 42
     verbose: -1
